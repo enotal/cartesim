@@ -2,22 +2,16 @@ import React, { useEffect, useState, useRef } from 'react'
 // Datatables
 import 'jquery'
 import $ from 'jquery'
-import DataTable from 'datatables.net-bs5' // Required for .xlsx
+import DataTable from 'datatables.net-bs5' 
 import 'datatables.net-select'
 import 'datatables.net-buttons'
 import 'datatables.net-buttons-bs5'
-import 'datatables.net-buttons/js/buttons.html5.js'
-import JSZip from 'jszip' // Required for .xlsx
-import 'datatables.net-buttons/js/buttons.print.min.js'
-import 'datatables.net-buttons/js/buttons.colVis.min.js'
+import 'datatables.net-buttons/js/buttons.html5.mjs'
 import 'pdfmake'
 import 'pdfmake/build/vfs_fonts'
-import language from 'datatables.net-plugins/i18n/fr-FR.json'
-import 'datatables.net-buttons-bs5/css/buttons.bootstrap5.css'
-import 'datatables.net-buttons-bs5/js/buttons.bootstrap5.js'
-import 'datatables.net-bs5/css/dataTables.bootstrap5.css'
-import 'datatables.net-bs5/js/dataTables.bootstrap5.js'
+import JSZip from 'jszip'  // Required for .xlxs 
 DataTable.Buttons.jszip(JSZip)
+import language from 'datatables.net-plugins/i18n/fr-FR.json'
 //
 import { getData, getItem, createItem, updateItem, deleteItem } from '../../apiService'
 import { CustomRequired } from '../../components/CustomRequired'
@@ -46,7 +40,6 @@ const Utilisateur = ({ auth }) => {
   const [roles, setRoles] = useState([])
   const [regions, setRegions] = useState([])
   const [provinces, setProvinces] = useState([])
-  const [selectedRoles, setSelectedRoles] = useState([])
   const [sessiondemandes, setSessiondemandes] = useState([])
   const [sites, setSites] = useState([])
   const exportConstants = { title: 'Liste des utilisateurs', columns: [1, 2, 3, 4, 5, 6, 7, 8] }
@@ -68,31 +61,29 @@ const Utilisateur = ({ auth }) => {
       title: 'SEXE',
       data: null,
       render: (data, type, row) => {
-        return row.sexe.substring(0, 1)
+	const r = row.sexe && row.sexe.substring(0, 1)
+        return `<div class="text-center">${r}</div>`
       },
     },
     {
       title: 'ROLES',
       data: null,
       render: (data, type, row) => {
-        const d = row.roles ? row.roles.map((role) => role.rlelibelle) : ''
-        return d
+        return row.roles ? row.roles.map((role) => role.rlelibelle) : ''
       },
     },
     {
       title: 'REGION',
       data: null,
       render: (data, type, row) => {
-        const d = row.region && row.region.rgnnom
-        return d
+        return row.region && row.region.rgnnom
       },
     },
     {
       title: 'PROVINCE',
       data: null,
       render: (data, type, row) => {
-        const d = row.province && row.province.prvnom
-        return d
+        return row.province && row.province.prvnom
       },
     },
     {
@@ -118,8 +109,8 @@ const Utilisateur = ({ auth }) => {
         // const btnShow = `<a class="btn btn-outline-warning me-1 tableActionBtn tableActionBtnShowItem" href="#" data-id="${row.id}" title="Voir les détails"><i class="fa fa-eye" aria-hidden="true"></i></a>`
         const btnEdit = `<a class="btn btn-outline-info me-1 tableActionBtn tableActionBtnEditItem" href="#" data-id="${row.id}" title="Editer"><i class="fa fa-edit" aria-hidden="true"></i></a>`
         const btnDelete = `<a class="btn btn-outline-danger me-1 tableActionBtn tableActionBtnDeleteItem" href="#" data-id="${row.id}" title="Supprimer"><i class="fa fa-trash" aria-hidden="true"></i></a>`
-        const btnPassword = `<a class="btn btn-outline-secondary tableActionBtn tableActionBtnPasswordItem" href="#" data-id="${row.id}" title="Générer un nouveau mot de passe"><i class="fa fa-key" aria-hidden="true"></i></a>`
-        return `<div class="d-flex align-content-center justify-content-center">${btnEdit + btnDelete + btnPassword}</div>`
+        //const btnPassword = `<a class="btn btn-outline-secondary tableActionBtn tableActionBtnPasswordItem" href="#" data-id="${row.id}" title="Générer un nouveau mot de passe"><i class="fa fa-key" aria-hidden="true"></i></a>`
+        return `<div class="d-flex align-content-center justify-content-center">${btnEdit + btnDelete}</div>`
       },
     },
   ]
@@ -136,43 +127,45 @@ const Utilisateur = ({ auth }) => {
   }
 
   const fetchGetRole = async () => {
-    await getData('roles')
-      .then((response) => {
-        setRoles(response)
-      })
-      .catch((err) => console.log(err))
+    const response = await getData('roles')
+    if (response) {
+      setRoles(response)
+    }
   }
 
   const fetchGetRegion = async () => {
-    await getData('regions')
-      .then((response) => {
-        setRegions(response)
-      })
-      .catch((err) => console.log(err))
+    const response = await getData('regions')
+    if (response) {
+      setRegions(response)
+    }
   }
 
   const fetchGetProvince = async () => {
-    await getData('provinces')
-      .then((response) => {
-        setProvinces(response)
-      })
-      .catch((err) => console.log(err))
+    const response = await getData('provinces')
+    if (response) {
+      setProvinces(response)
+    }
   }
 
   useEffect(() => {
-    // let timerId = setInterval(() => {
-    fetchGet()
-    fetchGetRole()
-    fetchGetRegion()
+    //let timerId = setInterval(() => {
+     fetchGet()
+     fetchGetRole()
+     fetchGetRegion()
     // }, 2000)
     // return () => {
-    //   clearInterval(timerId)
+     //  clearInterval(timerId)
     // }
   }, [])
 
   useEffect(() => {
-    if (tableRef.current) {
-      $(tableRef.current).DataTable({
+    //=== Retrieve saved page from localStorage
+    const savedPage = localStorage.getItem('cartesimDatatableCurrentPage')
+    const initialPage = savedPage ? parseInt(savedPage, 10) : 0 // Default to page 0
+    //===
+
+    //if (tableRef.current) {
+      const dataTableInstance = $(tableRef.current).DataTable({
         data: data,
         columns: columns,
         responsive: true,
@@ -207,7 +200,8 @@ const Utilisateur = ({ auth }) => {
               {
                 text: '<i class="fa fa-trash me-1" aria-hidden="true"></i>Tout supprimer',
                 className: 'dt-btn datatable-button rounded dt-btnCreate btnDeleteAll ms-2',
-                enabled: data.length > 0 ? true : false,
+                //enabled: data.length > 0 ? true : false,
+		enabled: false,
                 action: () => {
                   if (deleteFormRef.current && deleteFormBtnLaunchRef.current) {
                     setIndexAlert(null)
@@ -263,7 +257,7 @@ const Utilisateur = ({ auth }) => {
                   },
                 },
               },
-              {
+              /*{
                 extend: 'print',
                 text: '<i class="fa fa-print" aria-hidden="true"></i>',
                 titleAttr: 'Imprimer',
@@ -276,12 +270,28 @@ const Utilisateur = ({ auth }) => {
                     page: 'current',
                   },
                 },
-              },
+              },*/
             ],
           },
         },
       })
+
+      //=== Add an event listener to capture page changes
+    // You can bind an event listener to 'draw.dt' to detect page changes
+    $(tableRef.current).on('page.dt', function () {
+      const currentPage = dataTableInstance.page()
+      //console.log('Current Page Index:', currentPage)
+      // Example of saving the page index to local storage (optional)
+      localStorage.setItem('cartesimDatatableCurrentPage', currentPage.toString())
+    })
+    dataTableInstance.page(initialPage).draw(false)
+    // Cleanup function to destroy table instance and remove event listener
+    return () => {
+      dataTableInstance.destroy()
+      $(tableRef.current).off('page.dt')
     }
+    //===
+    //}
 
     // === DATATABLE ACTIONS : create, show, edit, delete
     $('#myTable')
@@ -324,17 +334,8 @@ const Utilisateur = ({ auth }) => {
           // Iterate over all checkboxes with the name 'choices[]'
           $('input[name="role"]').each(function () {
             var checkboxValue = $(this).val()
-            // Check if the current checkbox value is in the 'selectedValues' array
             const rleIds = r.roles.map((role) => role.id)
-            if (rleIds.toString().includes(checkboxValue)) {
-              // If it is, set the 'checked' property to true
-              $(this).prop('checked', true)
-              selectedRoles.push($(this).val())
-            } else {
-              // Optional: uncheck the box if it's not in the array
-              selectedRoles.pop($(this).val())
-              $(this).prop('checked', false)
-            }
+            $(this).prop('checked', rleIds.toString().includes(checkboxValue) ? true : false)
           })
           $('input[name="region"][value="' + r.region_id + '"]').prop('checked', true)
           $('input[name="province"][value="' + r.province_id + '"]').prop('checked', true)
@@ -362,29 +363,23 @@ const Utilisateur = ({ auth }) => {
   }
   //
 
-  const handleRole = (event) => {
-    const { value, checked } = event.target
-    // Use a functional state update to ensure the latest state is used
-    setSelectedRoles((prevSelectedItems) => {
-      if (checked) {
-        // If checked, add the value to the array
-        return [...prevSelectedItems, value]
-      } else {
-        // If unchecked, remove the value from the array using filter
-        return prevSelectedItems.filter((item) => item !== value)
-      }
-    })
-  }
-
   const handleSubmitCreateForm = async (e) => {
     e.preventDefault()
-    // récupération des données du formulaire
+    // Récupération des données du formulaire
     const action = e.target.getAttribute('create-data-action')
     const id = e.target.getAttribute('create-data-id')
     if (createFormRef.current && createFormBtnCloseRef.current) {
       const formData = new FormData(createFormRef.current)
       const formValues = Object.fromEntries(formData)
+      // Récupération des rôles 
+      let selectedRoles = []
+      $('input[name="role"]').each(function () {
+	if ($(this).prop('checked')) {
+	 selectedRoles.push($(this).val())
+	}
+      })
       formValues.role = selectedRoles
+      // 
       if (action === 'create') {
         await createItem(apiResource.create, formValues).then((response) => {
           if (response.success) {
@@ -396,11 +391,6 @@ const Utilisateur = ({ auth }) => {
       if (action === 'edit') {
         await updateItem(apiResource.update.replace(':id', id), formValues).then((response) => {
           if (response.success) {
-            // Mise à jour du cookie de l'utilisateur
-            let _auth = response.data
-            _auth.token = auth.token
-            localStorage.setItem('cartesim.auth', JSON.stringify(_auth))
-            //
             setIndexAlert(response)
             createFormBtnResetRef.current.click()
             createFormBtnCloseRef.current.click()
@@ -617,7 +607,6 @@ const Utilisateur = ({ auth }) => {
                                   id={'role-' + role.id}
                                   name="role"
                                   value={role.id}
-                                  onChange={handleRole}
                                 />
                                 <label className="form-check-label" htmlFor={'role-' + role.id}>
                                   {index + 1 + '. ' + role.rlelibelle}
@@ -714,8 +703,10 @@ const Utilisateur = ({ auth }) => {
                           </div>
                         </div>
 
-                        {/* Email */}
-                        <div className="mb-2">
+                        {/* Email, Password */}
+			<div className="row mb-2">
+			{/* Email */}
+                        <div className="col-md-6 mb-2">
                           <label htmlFor="email" className="form-label mb-0 fw-bolder">
                             Email
                             <CustomRequired />
@@ -731,6 +722,16 @@ const Utilisateur = ({ auth }) => {
                             />
                           </div>
                         </div>
+		      {/* Password */}
+		      <div className="col-md-6 mb-2">
+			<label htmlFor="password" className="form-label mb-0 fw-bolder">
+			Mot de passe
+			</label>
+			<div className="">
+                        <input type="password" className="form-control" id="password" name="password" disabled={createFormAction === "edit" ? false : true} />
+			</div>
+		       </div>
+		      </div>
 
                         <div className="row mb-2">
                           {/* Sexe */}

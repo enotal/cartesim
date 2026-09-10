@@ -7,7 +7,8 @@ export default defineConfig(() => {
   return {
     base: './',
     build: {
-      outDir: 'build',
+      outDir: 'build', 
+      chunkSizeWarningLimit: 3000,
     },
     css: {
       postcss: {
@@ -35,7 +36,7 @@ export default defineConfig(() => {
         },
       },
     },
-    plugins: [react()],
+    plugins: [react(),],
     resolve: {
       alias: [
         {

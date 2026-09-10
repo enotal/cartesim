@@ -2,20 +2,16 @@ import React, { useEffect, useState, useRef } from 'react'
 // Datatables
 import 'jquery'
 import $ from 'jquery'
-import 'datatables.net-bs5'
+import DataTable from 'datatables.net-bs5' 
 import 'datatables.net-select'
 import 'datatables.net-buttons'
 import 'datatables.net-buttons-bs5'
-import 'datatables.net-buttons/js/buttons.html5.min.js'
-import 'datatables.net-buttons/js/buttons.print.min.js'
-import 'datatables.net-buttons/js/buttons.colVis.min.js'
+import 'datatables.net-buttons/js/buttons.html5.mjs'
 import 'pdfmake'
 import 'pdfmake/build/vfs_fonts'
+import JSZip from 'jszip'  // Required for .xlxs 
+DataTable.Buttons.jszip(JSZip)
 import language from 'datatables.net-plugins/i18n/fr-FR.json'
-import 'datatables.net-buttons-bs5/css/buttons.bootstrap5.css'
-import 'datatables.net-buttons-bs5/js/buttons.bootstrap5.js'
-import 'datatables.net-bs5/css/dataTables.bootstrap5.css'
-import 'datatables.net-bs5/js/dataTables.bootstrap5.js'
 //
 import { getData, getItem, createItem, updateItem, deleteItem } from '../../apiService'
 import { CustomRequired } from '../../components/CustomRequired'
@@ -61,7 +57,8 @@ const Role = () => {
       title: 'UTILISATEURS',
       data: null,
       render: (data, type, row) => {
-        return row.users && row.users.length
+	const r = row.users && row.users.length
+        return `<div class="text-center">${r}</div>`
       },
     },
     {
@@ -105,8 +102,13 @@ const Role = () => {
   }, [])
 
   useEffect(() => {
-    if (tableRef.current) {
-      $(tableRef.current).DataTable({
+    //=== Retrieve saved page from localStorage
+    const savedPage = localStorage.getItem('cartesimDatatableCurrentPage')
+    const initialPage = savedPage ? parseInt(savedPage, 10) : 0 // Default to page 0
+    //===
+
+    //if (tableRef.current) {
+      const dataTableInstance = $(tableRef.current).DataTable({
         data: data,
         columns: columns,
         responsive: true,
@@ -197,7 +199,7 @@ const Role = () => {
                   },
                 },
               },
-              {
+              /*{
                 extend: 'print',
                 text: '<i class="fa fa-print" aria-hidden="true"></i>',
                 titleAttr: 'Imprimer',
@@ -210,12 +212,28 @@ const Role = () => {
                     page: 'current',
                   },
                 },
-              },
+              },*/
             ],
           },
         },
       })
+
+      //=== Add an event listener to capture page changes
+    // You can bind an event listener to 'draw.dt' to detect page changes
+    $(tableRef.current).on('page.dt', function () {
+      const currentPage = dataTableInstance.page()
+      //console.log('Current Page Index:', currentPage)
+      // Example of saving the page index to local storage (optional)
+      localStorage.setItem('cartesimDatatableCurrentPage', currentPage.toString())
+    })
+    dataTableInstance.page(initialPage).draw(false)
+    // Cleanup function to destroy table instance and remove event listener
+    return () => {
+      dataTableInstance.destroy()
+      $(tableRef.current).off('page.dt')
     }
+    //===
+    //}
 
     // === DATATABLE ACTIONS : create, show, edit, delete
     $('#myTable')

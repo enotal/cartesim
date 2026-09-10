@@ -1,97 +1,42 @@
 import React, { useEffect, useState } from 'react'
-import { getData } from '../../apiService'
+import { getData, getDashboardData } from '../../apiService'
 import { intervalDelays } from '../../constants'
+import { data } from 'autoprefixer'
 
 const Dashboard = ({ auth }) => {
-  const [anneeacademique, setAnneeacademique] = useState([])
-  const [repondants, setRepondants] = useState([
-    { title: 'Répondants', value: 0 },
-    { title: 'admissibles', value: 0 },
-    { title: 'bénéficiaires', value: 0 },
-    { title: 'restants', value: 0 },
-  ])
-  const [sites, setSites] = useState([
-    { title: 'Sites', value: 0 },
-    { title: 'actives', value: 0 },
-    { title: 'inactives', value: 0 },
-  ])
-  const [sims, setSims] = useState([
-    { title: 'Sims', value: 0 },
-    { title: 'associées', value: 0 },
-    { title: 'attribuées', value: 0 },
-    { title: 'libre', value: 0 },
-  ])
-  const [sessiondemandes, setSessiondemandes] = useState([
-    { title: 'Session de demandes', value: 0 },
-    { title: 'actives', value: 0 },
-    { title: 'inactives', value: 0 },
-  ])
-  const [sessionremises, setSessionremises] = useState([
-    { title: 'Session de remises', value: 0 },
-    { title: 'actives', value: 0 },
-    { title: 'inactives', value: 0 },
-  ])
-  const [demandes, setDemandes] = useState([
-    { title: 'Demandes', value: 0 },
-    { title: 'traitées', value: 0 },
-    { title: 'en cours', value: 0 },
-  ])
-  const [dates, setDates] = useState({ datedebut: '', datefin: '' })
-  // const [remises, setRemises] = useState([])
+  const [anneeacademique, setAnneeacademique] = useState(null)
+  const [repondant, setRepondant] = useState({
+    total: 0,
+    admissible: 0,
+    beneficiaire: 0,
+    restant: 0,
+  })
+  const [site, setSite] = useState({ total: 0, active: 0, inactive: 0 })
+  const [sim, setSim] = useState({ total: 0, associee: 0, attribuee: 0, libre: 0 })
+  const [sessiondemande, setSessiondemande] = useState({ total: 0, active: 0, inactive: 0 })
+  const [sessionremise, setSessionremise] = useState({ total: 0, active: 0, inactive: 0 })
+  const [demande, setDemande] = useState({ total: 0, traitee: 0, encours: 0 })
 
-  // Année académique en cours
+  // Année académique en cours et données
   const fetchGetAnneeacademique = async () => {
-    const response = await getData('anneeacademiques_getcurrent/:resource')
-    if (response) {
-      setAnneeacademique(response)
-      const dd = response.acadatedebut !== null ? new Date(response.acadatedebut) : ''
-      const df = response.acadatefin !== null ? new Date(response.acadatefin) : ''
-      setDates({
-        datedebut: dd !== null ? dd.toLocaleDateString() : dd,
-        datefin: df !== null ? df.toLocaleDateString() : df,
+    const response = await getDashboardData('anneeacademiques_getDashboardData')
+    if (response.success) {
+      const aca = response.data
+      // Année académique
+      const dd = aca.datedebut !== null ? new Date(aca.datedebut) : null
+      const df = aca.datefin !== null ? new Date(aca.datefin) : null
+      setAnneeacademique({
+        id: aca.id,
+        code: aca.code,
+        datedebut: dd !== null ? dd.toLocaleDateString() : '',
+        datefin: df !== null ? df.toLocaleDateString() : '',
       })
       // Sessions de demandes
-      if (response.sesssiondemandes) {
-        const d = response.sessiondemandes
-        const ac = d.filter((item) => item.sedactive === 'oui')
-        setSessiondemandes([
-          { title: 'Session de demandes', value: d.length },
-          { title: 'actives', value: ac.length },
-          { title: 'inactives', value: d.length - ac.length },
-        ])
-      }
-      // Sessions de remise
-      if (response.sesssionremises) {
-        const d = response.sessionremises
-        const ac = d.filter((item) => item.seractive === 'oui')
-        setSessionremises([
-          { title: 'Session de remises', value: d.length },
-          { title: 'actives', value: ac.length },
-          { title: 'inactives', value: d.length - ac.length },
-        ])
-      }
-      // Demandes
-      if (response.sessiondemandes.demandes) {
-        const d = response.sessiondemandes.demandes
-        const tr = d.filter((item) => item.sim !== null)
-        setDemandes([
-          { title: 'Demandes', value: d.length },
-          { title: 'traitées', value: tr.length },
-          { title: 'en cours', value: d.length - tr.length },
-        ])
-      }
-      if (response.sims) {
-        const s = response.sims
-        const ass = s.filter((item) => item.region_id !== null || item.province_id !== null)
-        const att = s.filter((item) => item.demande_id !== null)
-        const lib = s.length - att.length
-        setSims([
-          { title: 'Sims', value: s.length },
-          { title: 'associées', value: ass.length },
-          { title: 'attribuées', value: att.length },
-          { title: 'libres', value: lib },
-        ])
-      }
+      const sed = aca.sessiondemandes && aca.sessiondemandes
+      setSessiondemande(sed)
+      // Sessions de remises
+      const ser = aca.sessionremises && aca.sessionremises
+      setSessionremise(ser)
     } else {
       //
     }
@@ -99,66 +44,55 @@ const Dashboard = ({ auth }) => {
 
   // Répondants
   const fetchGetRepondant = async () => {
-    await getData('repondants')
-      .then((response) => {
-        const s = response
-        if (s) {
-          const adm = s.filter(
-            (item) =>
-              item.demandes.length > 0 && item.demandes.sim && item.demandes.sim.length === 0,
-          )
-          const ben = s.filter(
-            (item) => item.demandes.length > 0 && item.demandes.sim && item.demandes.sim.length > 0,
-          )
-          const res = s.filter((item) => item.demandes.length === 0)
-          setRepondants([
-            { title: 'Répondants', value: s.length },
-            { title: 'admissibles', value: adm.length },
-            { title: 'bénéficiaires', value: ben.length },
-            { title: 'restants', value: res.length },
-          ])
-        } else {
-          //
-        }
-      })
-      .catch((err) => console.log(err))
+    const response = await getDashboardData('repondants_getDashboardData')
+    if (response.success) {
+      setRepondant(response.data)
+    } else {
+      //
+    }
   }
 
   // Sites
   const fetchGetSite = async () => {
-    await getData('sites')
-      .then((response) => {
-        console.log(response)
-        const al = response
-        const ac = al.filter((item) => item.sitactive === 'oui')
-        setSites([
-          { title: 'Sites', value: al.length },
-          { title: 'actives', value: ac.length },
-          { title: 'inactives', value: al.length - ac.length },
-        ])
-      })
-      .catch((err) => console.log(err))
+    const response = await getDashboardData('sites_getDashboardData')
+    if (response.success) {
+      setSite(response.data)
+    } else {
+      //
+    }
   }
 
-  // Remises
-  // const fetchGetRemise = async () => {
-  //   await getData('demandes')
-  //     .then((response) => {
-  //       setDemandes(response)
-  //     })
-  //     .catch((err) => console.log(err))
-  // }
+  // Sims
+  const fetchGetSim = async () => {
+    const response = await getDashboardData('sims_getDashboardData')
+    if (response.success) {
+      setSim(response.data)
+    } else {
+      //
+    }
+  }
+
+  // Demandes
+  const fetchGetDemande = async () => {
+    const response = await getDashboardData('demandes_getDashboardData')
+    if (response.success) {
+      setDemande(response.data)
+    } else {
+      //
+    }
+  }
 
   useEffect(() => {
-    fetchGetAnneeacademique()
     let timerId = setInterval(() => {
+      fetchGetAnneeacademique()
       fetchGetRepondant()
       fetchGetSite()
-      // fetchGetRemise()
-    }, 2000)
-    return () => {
-      clearInterval(timerId)
-    }
+      fetchGetSim()
+      fetchGetDemande()
+     }, 5000)
+     return () => {
+       clearInterval(timerId)
+     }
   }, [])
 
   return (
@@ -170,13 +104,15 @@ const Dashboard = ({ auth }) => {
           <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-0">
             <div className="col text-start">
               Année académique :
-              <span className="ms-1">{anneeacademique && anneeacademique.acacode}</span>
+              <span className="ms-1">{anneeacademique && anneeacademique.code}</span>
             </div>
             <div className="col text-center">
-              Date de début :<span className="ms-1">{dates.datedebut}</span>
+              Date de début :
+              <span className="ms-1">{anneeacademique && anneeacademique.datedebut}</span>
             </div>
             <div className="col text-end">
-              Date de fin :<span className="ms-1">{dates.datefin}</span>
+              Date de fin :
+              <span className="ms-1">{anneeacademique && anneeacademique.datefin}</span>
             </div>
           </div>
         </div>
@@ -190,22 +126,26 @@ const Dashboard = ({ auth }) => {
           <div className="card h-100 statisticCard">
             <div className="card-body">
               <h5 className="card-title d-flex statisticCardTitle">
-                {repondants && repondants[0].title}
-                <span className="ms-auto">{repondants && repondants[0].value}</span>
+                Répondants
+                <span className="ms-auto">{repondant.total}</span>
               </h5>
-              <div
-                className={`row row-cols-1 row-cols-md-2 row-cols-lg-${repondants.length - 1} g-0 statisticCardValue`}
-              >
-                {repondants.map((item, index) => {
-                  return (
-                    index > 0 && (
-                      <div className="col text-center" key={'repondants-item-' + index}>
-                        <span className="">{item.value}</span>
-                        <p className="py-0 my-0">{item.title}</p>
-                      </div>
-                    )
-                  )
-                })}
+              <div className="row row-cols-1 row-cols-md-2 row-cols-lg-2 g-0 statisticCardValue">
+                {/* admissibles */}
+                <div className="col text-center">
+                  <span className="">{repondant.admissible}</span>
+                  <p className="py-0 my-0">admissibles</p>
+                </div>
+                {/* bénéficiaires */}
+                <div className="col text-center">
+                  <span className="">{repondant.beneficiaire}</span>
+                  <p className="py-0 my-0">bénéficiaires</p>
+                </div>
+                {/* restants */}
+                <div className="col text-center">
+                  <span className="">{repondant.restant}</span>
+                  <p className="py-0 my-0">restants</p>
+                </div>
+                {/*  */}
               </div>
             </div>
           </div>
@@ -216,22 +156,21 @@ const Dashboard = ({ auth }) => {
           <div className="card h-100 statisticCard">
             <div className="card-body">
               <h5 className="card-title d-flex statisticCardTitle">
-                {sites && sites[0].title}
-                <span className="ms-auto">{sites && sites[0].value}</span>
+                Sites de remises
+                <span className="ms-auto">{site.total}</span>
               </h5>
-              <div
-                className={`row row-cols-1 row-cols-md-2 row-cols-lg-${sites.length - 1} g-0 statisticCardValue`}
-              >
-                {sites.map((item, index) => {
-                  return (
-                    index > 0 && (
-                      <div className="col text-center" key={'sites-item-' + index}>
-                        <span className="">{item.value}</span>
-                        <p className="py-0 my-0">{item.title}</p>
-                      </div>
-                    )
-                  )
-                })}
+              <div className="row row-cols-1 row-cols-md-2 row-cols-lg-2 g-0 statisticCardValue">
+                {/* actives */}
+                <div className="col text-center">
+                  <span className="">{site.active}</span>
+                  <p className="py-0 my-0">actives</p>
+                </div>
+                {/* inactives */}
+                <div className="col text-center">
+                  <span className="">{site.inactive}</span>
+                  <p className="py-0 my-0">inactives</p>
+                </div>
+                {/*  */}
               </div>
             </div>
           </div>
@@ -242,22 +181,26 @@ const Dashboard = ({ auth }) => {
           <div className="card h-100 statisticCard">
             <div className="card-body">
               <h5 className="card-title d-flex statisticCardTitle">
-                {sims && sims[0].title}
-                <span className="ms-auto">{sims && sims[0].value}</span>
+                Sims
+                <span className="ms-auto">{sim.total}</span>
               </h5>
-              <div
-                className={`row row-cols-1 row-cols-md-2 row-cols-lg-${sims.length - 1} g-0 statisticCardValue`}
-              >
-                {sims.map((item, index) => {
-                  return (
-                    index > 0 && (
-                      <div className="col text-center" key={'sims-item-' + index}>
-                        <span className="">{item.value}</span>
-                        <p className="py-0 my-0">{item.title}</p>
-                      </div>
-                    )
-                  )
-                })}
+              <div className="row row-cols-1 row-cols-md-3 row-cols-lg-3 g-0 statisticCardValue">
+                {/* associées */}
+                <div className="col text-center">
+                  <span className="">{sim.associee}</span>
+                  <p className="py-0 my-0">associées</p>
+                </div>
+                {/* attribuées */}
+                <div className="col text-center">
+                  <span className="">{sim.attribuee}</span>
+                  <p className="py-0 my-0">attribuées</p>
+                </div>
+                {/* libres */}
+                <div className="col text-center">
+                  <span className="">{sim.libre}</span>
+                  <p className="py-0 my-0">libres</p>
+                </div>
+                {/*  */}
               </div>
             </div>
           </div>
@@ -268,24 +211,21 @@ const Dashboard = ({ auth }) => {
           <div className="card h-100 statisticCard">
             <div className="card-body">
               <h5 className="card-title d-flex statisticCardTitle">
-                {sessiondemandes && sessiondemandes[0].title}
-                <span className="ms-auto">{sessiondemandes && sessiondemandes[0].value}</span>
+                Sessions de demandes
+                <span className="ms-auto">{sessiondemande.total}</span>
               </h5>
-              <div
-                className={`row row-cols-1 row-cols-md-2 row-cols-lg-${
-                  sessiondemandes.length - 1
-                } g-0 statisticCardValue`}
-              >
-                {sessiondemandes.map((item, index) => {
-                  return (
-                    index > 0 && (
-                      <div className="col text-center" key={'sims-item-' + index}>
-                        <span className="">{item.value}</span>
-                        <p className="py-0 my-0">{item.title}</p>
-                      </div>
-                    )
-                  )
-                })}
+              <div className="row row-cols-1 row-cols-md-2 row-cols-lg-2 g-0 statisticCardValue">
+                {/* actives */}
+                <div className="col text-center">
+                  <span className="">{sessiondemande.active}</span>
+                  <p className="py-0 my-0">actives</p>
+                </div>
+                {/* inactives */}
+                <div className="col text-center">
+                  <span className="">{sessiondemande.inactive}</span>
+                  <p className="py-0 my-0">inactives</p>
+                </div>
+                {/*  */}
               </div>
             </div>
           </div>
@@ -296,22 +236,21 @@ const Dashboard = ({ auth }) => {
           <div className="card h-100 statisticCard">
             <div className="card-body">
               <h5 className="card-title d-flex statisticCardTitle">
-                {sessionremises && sessionremises[0].title}
-                <span className="ms-auto">{sessionremises && sessionremises[0].value}</span>
+                Sessions de remises
+                <span className="ms-auto">{sessionremise.total}</span>
               </h5>
-              <div
-                className={`row row-cols-1 row-cols-md-2 row-cols-lg-${sessionremises.length - 1} g-0 statisticCardValue`}
-              >
-                {sessionremises.map((item, index) => {
-                  return (
-                    index > 0 && (
-                      <div className="col text-center" key={'sims-item-' + index}>
-                        <span className="">{item.value}</span>
-                        <p className="py-0 my-0">{item.title}</p>
-                      </div>
-                    )
-                  )
-                })}
+              <div className="row row-cols-1 row-cols-md-2 row-cols-lg-2 g-0 statisticCardValue">
+                {/* actives */}
+                <div className="col text-center">
+                  <span className="">{sessionremise.active}</span>
+                  <p className="py-0 my-0">actives</p>
+                </div>
+                {/* inactives */}
+                <div className="col text-center">
+                  <span className="">{sessionremise.inactive}</span>
+                  <p className="py-0 my-0">inactives</p>
+                </div>
+                {/*  */}
               </div>
             </div>
           </div>
@@ -322,36 +261,25 @@ const Dashboard = ({ auth }) => {
           <div className="card h-100 statisticCard">
             <div className="card-body">
               <h5 className="card-title d-flex statisticCardTitle">
-                {demandes && demandes[0].title}
-                <span className="ms-auto">{demandes && demandes[0].value}</span>
+                Demandes
+                <span className="ms-auto">{demande.total}</span>
               </h5>
-              <div
-                className={`row row-cols-1 row-cols-md-2 row-cols-lg-${demandes.length - 1} g-0 statisticCardValue`}
-              >
-                {demandes.map((item, index) => {
-                  return (
-                    index > 0 && (
-                      <div className="col text-center" key={'sims-item-' + index}>
-                        <span className="">{item.value}</span>
-                        <p className="py-0 my-0">{item.title}</p>
-                      </div>
-                    )
-                  )
-                })}
+              <div className="row row-cols-1 row-cols-md-2 row-cols-lg-2 g-0 statisticCardValue">
+                {/* traitées */}
+                <div className="col text-center">
+                  <span className="">{demande.traitee}</span>
+                  <p className="py-0 my-0">traitées</p>
+                </div>
+                {/* en cours */}
+                <div className="col text-center">
+                  <span className="">{demande.encours}</span>
+                  <p className="py-0 my-0">en cours</p>
+                </div>
+                {/*  */}
               </div>
             </div>
           </div>
         </div>
-
-        {/* <!-- Card 7 : Remises --> */}
-        {/* <div className="col">
-          <div className="card h-100">
-            <div className="card-body">
-              <h5 className="card-title d-flex">Remises<span className="ms-auto">{sims && sims.length}</span></h5>
-              <p className="card-text">This is a longer card with more text below.</p>
-            </div>
-          </div>
-        </div> */}
 
         {/*  */}
       </div>

@@ -1,12 +1,13 @@
 import axios from 'axios'
 import { isAuthenticated } from './Auth'
 
-const API_BASE_URL = 'http://localhost:8000/api/'
+//const API_BASE_URL = 'http://localhost:8000/api/'
+const API_BASE_URL = 'https://apicartesim.uv.bf/api/'
 
 // login
 export const login = async (resourceData) => {
   try {
-    const response = await axios.post(API_BASE_URL + 'login', resourceData)
+    const response = await axios.post(API_BASE_URL + 'login', resourceData) 
     return response.data
   } catch (error) {
     return error.response
@@ -38,7 +39,13 @@ export const getData = async (apiResource) => {
         Authorization: auth ? `Bearer ${auth.token}` : '',
       },
     })
-    return response.data.data
+    if (response.data.data) {
+      return response.data.data
+    } else if (response.data) {
+      return response.data
+    } else {
+      return response
+    }
   } catch (error) {
     return error.response
   }
@@ -76,6 +83,25 @@ export const getItemBy = async (apiResource, resourceData) => {
   }
 }
 
+//=== Guest : getItemBy, Store
+export const guestGetItemBy = async (apiResource, resourceData) => {
+  try {
+    const response = await axios.post(API_BASE_URL + apiResource, resourceData)
+    return response.data
+  } catch (error) {
+    return error.response
+  }
+}
+export const guestCreateItem = async (apiResource, resourceData) => {
+  try {
+    const response = await axios.post(API_BASE_URL + apiResource, resourceData)
+    return response.data
+  } catch (error) {
+    return error.response
+  }
+}
+//===
+
 // Store
 export const createItem = async (apiResource, resourceData) => {
   const auth = isAuthenticated()
@@ -108,6 +134,15 @@ export const updateItem = async (apiResource, resourceData) => {
   }
 }
 
+export const guestUpdateItem = async (apiResource, resourceData) => {
+  try {
+    const response = await axios.patch(API_BASE_URL + apiResource, resourceData)
+    return response.data
+  } catch (error) {
+    return error.response
+  }
+}
+
 // Delete
 export const deleteItem = async (apiResource) => {
   const auth = isAuthenticated()
@@ -118,6 +153,15 @@ export const deleteItem = async (apiResource) => {
         Authorization: auth && `Bearer ${auth.token}`,
       },
     })
+    return response.data
+  } catch (error) {
+    return error.response
+  }
+}
+
+export const getDashboardData = async (apiResource, resourceData) => {
+  try {
+    const response = await axios.post(API_BASE_URL + apiResource, resourceData)
     return response.data
   } catch (error) {
     return error.response

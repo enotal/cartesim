@@ -2,22 +2,16 @@ import React, { useEffect, useState, useRef } from 'react'
 // Datatables
 import 'jquery'
 import $ from 'jquery'
-import DataTable from 'datatables.net-bs5' // Required for .xlsx
+import DataTable from 'datatables.net-bs5' 
 import 'datatables.net-select'
 import 'datatables.net-buttons'
 import 'datatables.net-buttons-bs5'
-import 'datatables.net-buttons/js/buttons.html5.js'
-import JSZip from 'jszip' // Required for .xlsx
-import 'datatables.net-buttons/js/buttons.print.min.js'
-import 'datatables.net-buttons/js/buttons.colVis.min.js'
+import 'datatables.net-buttons/js/buttons.html5.mjs'
 import 'pdfmake'
 import 'pdfmake/build/vfs_fonts'
-import language from 'datatables.net-plugins/i18n/fr-FR.json'
-import 'datatables.net-buttons-bs5/css/buttons.bootstrap5.css'
-import 'datatables.net-buttons-bs5/js/buttons.bootstrap5.js'
-import 'datatables.net-bs5/css/dataTables.bootstrap5.css'
-import 'datatables.net-bs5/js/dataTables.bootstrap5.js'
+import JSZip from 'jszip'  // Required for .xlxs 
 DataTable.Buttons.jszip(JSZip)
+import language from 'datatables.net-plugins/i18n/fr-FR.json'
 //
 import { getData, getItem, createItem, updateItem, deleteItem } from '../../apiService'
 import { CustomRequired } from '../../components/CustomRequired'
@@ -27,7 +21,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPlus, faEdit } from '@fortawesome/free-solid-svg-icons'
 import { actives, colors } from '../../constants'
 
-const Sessiondemande = () => {
+const Sessiondemande = ({ auth }) => {
   const tableRef = useRef()
   const createFormRef = useRef()
   const deleteFormRef = useRef()
@@ -62,16 +56,22 @@ const Sessiondemande = () => {
       title: 'DATE DEBUT',
       data: null,
       render: (data, type, row) => {
-        let d = new Date(row.serdatedebut)
-        return d.toLocaleDateString()
+	if (row.serdatedebut !== null) {
+          const r = new Date(row.serdatedebut)
+          return `<div class="text-center">${r.toLocaleDateString()}</div>`
+	}
+	return ''
       },
     },
     {
       title: 'DATE FIN',
       data: null,
       render: (data, type, row) => {
-        let d = new Date(row.serdatefin)
-        return d.toLocaleDateString()
+	if (row.serdatefin !== null) {
+          const r = new Date(row.serdatefin)
+          return `<div class="text-center">${r.toLocaleDateString()}</div>`
+	}
+	return ''
       },
     },
     { title: 'TYPE REPONDANT', data: 'typerepondant.tyrlibelle' },
@@ -79,7 +79,8 @@ const Sessiondemande = () => {
       title: 'DEMANDE',
       data: null,
       render: (data, type, row) => {
-        return row.demandes && row.demandes.length
+	const r = row.demandes && row.demandes.length
+	return `<div class="text-center">${r}</div>`
       },
     },
     {
@@ -97,7 +98,7 @@ const Sessiondemande = () => {
         // const btnShow = `<a class="btn btn-outline-warning me-1 tableActionBtn tableActionBtnShowItem" href="#" data-id="${row.id}"><i class="fa fa-eye" aria-hidden="true"></i></a>`
         const btnEdit = `<a class="btn btn-outline-info me-1 tableActionBtn tableActionBtnEditItem" href="#" data-id="${row.id}"><i class="fa fa-edit" aria-hidden="true"></i></a>`
         const btnDelete = `<a class="btn btn-outline-danger tableActionBtn tableActionBtnDeleteItem" href="#" data-id="${row.id}"><i class="fa fa-trash" aria-hidden="true"></i></a>`
-        return `<div class="d-flex align-content-center justify-content-center">${btnEdit + btnDelete}</div>`
+        return auth.roles.includes('administrateur') ? `<div class="d-flex align-content-center justify-content-center">${btnEdit + btnDelete}</div>` : auth.roles.includes('agent-cpm') ? `<div class="d-flex align-content-center justify-content-center">${btnEdit}</div>` : ""
       },
     },
   ]
@@ -114,19 +115,17 @@ const Sessiondemande = () => {
   }
 
   const fetchGetAnneeacademique = async () => {
-    await getData('anneeacademiques')
-      .then((response) => {
-        setAnneeacademiques(response)
-      })
-      .catch((err) => console.log(err))
+    const response = await getData('anneeacademiques')
+    if (response) {
+      setAnneeacademiques(response)
+    }
   }
 
   const fetchGetTyperepondant = async () => {
-    await getData('typerepondants')
-      .then((response) => {
-        setTyperepondants(response)
-      })
-      .catch((err) => console.log(err))
+    const response = await getData('typerepondants')
+    if (response) {
+      setTyperepondants(response)
+    }
   }
 
   useEffect(() => {
@@ -141,8 +140,13 @@ const Sessiondemande = () => {
   }, [])
 
   useEffect(() => {
-    if (tableRef.current) {
-      $(tableRef.current).DataTable({
+    //=== Retrieve saved page from localStorage
+    const savedPage = localStorage.getItem('cartesimDatatableCurrentPage')
+    const initialPage = savedPage ? parseInt(savedPage, 10) : 0 // Default to page 0
+    //===
+
+    //if (tableRef.current) {
+      const dataTableInstance = $(tableRef.current).DataTable({
         data: data,
         columns: columns,
         responsive: true,
@@ -163,7 +167,7 @@ const Sessiondemande = () => {
               {
                 text: '<i class="fa fa-plus me-1" aria-hidden="true"></i>Ajouter',
                 className: 'dt-btn datatable-button rounded dt-btnCreate btnCreate',
-                enabled: true,
+                enabled: auth.roles.includes('administrateur') || auth.roles.includes('agent-cpm') ? true : false,
                 action: () => {
                   if (createFormRef.current && createFormBtnLaunchRef.current) {
                     setCreateAlert(null)
@@ -177,7 +181,8 @@ const Sessiondemande = () => {
               {
                 text: '<i class="fa fa-trash me-1" aria-hidden="true"></i>Tout supprimer',
                 className: 'dt-btn datatable-button rounded dt-btnCreate btnDeleteAll ms-2',
-                enabled: data.length > 0 ? true : false,
+                //enabled: data.length > 0 ? true : false,
+		enabled: false,
                 action: () => {
                   if (deleteFormRef.current && deleteFormBtnLaunchRef.current) {
                     setIndexAlert(null)
@@ -233,7 +238,7 @@ const Sessiondemande = () => {
                   },
                 },
               },
-              {
+              /*{
                 extend: 'print',
                 text: '<i class="fa fa-print" aria-hidden="true"></i>',
                 titleAttr: 'Imprimer',
@@ -246,12 +251,28 @@ const Sessiondemande = () => {
                     page: 'current',
                   },
                 },
-              },
+              },*/
             ],
           },
         },
       })
+
+      //=== Add an event listener to capture page changes
+    // You can bind an event listener to 'draw.dt' to detect page changes
+    $(tableRef.current).on('page.dt', function () {
+      const currentPage = dataTableInstance.page()
+      //console.log('Current Page Index:', currentPage)
+      // Example of saving the page index to local storage (optional)
+      localStorage.setItem('cartesimDatatableCurrentPage', currentPage.toString())
+    })
+    dataTableInstance.page(initialPage).draw(false)
+    // Cleanup function to destroy table instance and remove event listener
+    return () => {
+      dataTableInstance.destroy()
+      $(tableRef.current).off('page.dt')
     }
+    //===
+    //}
 
     // === DATATABLE ACTIONS : create, show, edit, delete
     $('#myTable')

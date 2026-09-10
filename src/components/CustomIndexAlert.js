@@ -5,7 +5,8 @@ export const CustomIndexAlert = ({ alert, alignment }) => {
   const indexAlertBg = {
     success: '#056709',
     danger: '#970000',
-    warning: '',
+    //warning: '#C7CF00',
+    warning: '#e1b505', 
   }
 
   return (

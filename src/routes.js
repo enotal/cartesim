@@ -22,7 +22,7 @@ const routes = [
   { path: '/typerepondants', name: 'Type Répondants', element: Typerepondant },
   { path: '/repondants', name: 'Répondants', element: Repondant },
   { path: '/sims', name: 'Sims', element: Sim },
-  { path: '/remises', name: 'Remises Sims', element: Remise },
+  { path: '/remises', name: 'Remises', element: Remise },
   { path: '/regions', name: 'Régions', element: Region },
   { path: '/provinces', name: 'Provinces', element: Province },
   { path: '/sites', name: 'Sites', element: Site },

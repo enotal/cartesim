@@ -56,7 +56,7 @@ const AppHeader = ({ auth }) => {
           <CIcon icon={cilMenu} size="lg" className="text-light" />
         </CHeaderToggler>
         <CHeaderNav className="ms-auto me-3">
-          <CNavItem>
+          {/*<CNavItem>
             <CNavLink href="/#/dashboard" className="text-light">
               <CIcon icon={cilBell} size="lg" className="me-1" />
               Notifications
@@ -67,7 +67,7 @@ const AppHeader = ({ auth }) => {
               <CIcon icon={cilEnvelopeOpen} size="lg" className="me-1" />
               Messages
             </CNavLink>
-          </CNavItem>
+          </CNavItem>*/}
         </CHeaderNav>
         <CHeaderNav>
           <AppHeaderDropdown auth={auth} />

@@ -2,13 +2,13 @@
   "name": "@coreui/coreui-free-react-admin-template",
   "version": "5.2.0",
   "description": "CoreUI Free React Admin Template",
-  "homepage": ".",
+  "homepage": "http://.",
   "bugs": {
     "url": "https://github.com/coreui/coreui-free-react-admin-template/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git@github.com:coreui/coreui-free-react-admin-template.git"
+    "url": "git+ssh://git@github.com/coreui/coreui-free-react-admin-template.git"
   },
   "license": "MIT",
   "author": "The CoreUI Team (https://github.com/orgs/coreui/people)",
@@ -28,23 +28,26 @@
     "@coreui/utils": "^2.0.2",
     "@fortawesome/fontawesome-free": "^6.7.2",
     "@fortawesome/free-solid-svg-icons": "^7.1.0",
-    "@fortawesome/react-fontawesome": "^3.1.1",
+    "@fortawesome/react-fontawesome": "^3.2.0",
     "@popperjs/core": "^2.11.8",
     "axios": "^1.11.0",
     "bootstrap": "^5.3.7",
     "chart.js": "^4.4.6",
     "classnames": "^2.5.1",
     "core-js": "^3.39.0",
-    "cors": "^2.8.5",
-    "datatables.net-bs5": "^2.3.2",
-    "datatables.net-buttons": "^3.2.4",
-    "datatables.net-buttons-bs5": "^3.2.4",
+    "cors": "^2.8.6",
+    "datatables.net": "^2.3.7",
+    "datatables.net-bs": "^2.3.6",
+    "datatables.net-bs5": "^2.3.7",
+    "datatables.net-buttons": "^3.2.6",
+    "datatables.net-buttons-bs5": "^3.2.6",
+    "datatables.net-dt": "^2.3.7",
     "datatables.net-plugins": "^2.3.0",
+    "datatables.net-responsive-bs5": "^3.0.8",
     "datatables.net-select": "^3.0.1",
-    "express": "^5.2.1",
+    "jquery": "^4.0.0",
     "jszip": "^3.10.1",
-    "keycloak-js": "^26.2.0",
-    "npm": "^11.7.0",
+    "npm": "^10.8.2",
     "pdfmake": "^0.2.20",
     "prop-types": "^15.8.1",
     "react": "^18.3.1",
@@ -71,5 +74,10 @@
     "prettier": "3.3.3",
     "sass": "^1.81.0",
     "vite": "^5.4.21"
-  }
+  },
+  "main": ".eslintrc.js",
+  "directories": {
+    "test": "tests"
+  },
+  "keywords": []
 }

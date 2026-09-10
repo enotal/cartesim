@@ -30,10 +30,20 @@
   text-align: justify; 
   font-size: 1.2em;
 }
+.home-description p {
+  padding-right: 5em; 
+}
 
 .home-login-form .card {
   /* background-color: #f3f4f7; */
   border: 1px solid #056709;
+}
+.home-login-form-target {
+  background-color: #970000;
+  border-color: #970000;
+  color: #fff; 
+  font-size: 1em;
+  font-weight: bold;
 }
 
 .card-header-custom-title {
@@ -91,16 +101,42 @@
   font-size: 1.2em;
 }
 
+.show-follow-result-card, .show-declare-result-card {
+  border: 1px solid #056709;
+}
+.show-follow-result-card .card-header, .show-declare-result-card .card-header {
+  background-color: #056709;
+  color: #fff;
+}
+.show-follow-result-card .card-body {
+  max-height: 20em;
+  overflow-y: auto;
+}
+.show-declare-result-card .card-body {
+  max-height: 25em;
+  overflow-y: auto;
+}
+
 table .show-table-title {
   color: #000;
 }
-
 table .show-table-value {
   color: #00407d;
   text-align: end;
   font-weight: bold;
 }
+table .show-table-title,
+.show-follow-title {
+  color: #000;
+  font-weight: bold;
+}
 
+table .show-table-value,
+.show-follow-value {
+  color: #00407d;
+  text-align: end;
+  font-weight: bold;
+}
 .form-label {
   font-weight: bolder;
 }
@@ -204,7 +240,13 @@ table .show-table-value {
 }
 
 /* ============= */
-
+.simremiseSimCard, .simremiseDemandeCard {
+  border: 1px solid #056709;
+}
+.simremiseSimCard .card-header, .simremiseDemandeCard .card-header {
+  background-color: #056709; 
+  color: #fff;
+}
 /* === */
 
 /* Media */
@@ -212,5 +254,13 @@ table .show-table-value {
 @media (max-width: 768px) {
   .demandeGuestSoumettre .sessionInfo {
     font-size: 0.9em;
+  }
+
+  .home-description {
+    font-size: 1em;
+  }
+  
+  .home-description p {
+    padding-right: 0;
   }
 }

@@ -2,13 +2,13 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AppGuestHeader, AppGuestFooter } from '../../components'
 import { CustomRequired } from '../../components/CustomRequired'
-import { getItem, getItemBy, createItem } from '../../apiService'
+import { getItem, getItemBy, guestCreateItem } from '../../apiService'
 import { CustomIndexAlert } from '../../components/CustomIndexAlert'
 import { isEmpty } from 'validator'
 import $ from 'jquery'
 import { colors } from '../../constants'
 
-const DemandeGuestSoumettre = () => {
+  const DemandeGuestSoumettre = () => {
   const navigate = useNavigate()
   const formRef = useRef()
   const btnResetRef = useRef()
@@ -25,14 +25,19 @@ const DemandeGuestSoumettre = () => {
   const fetchGetSessiondemande = async () => {
     const response = await getItem('sessiondemandes_getactive')
     if (response.success) {
-      setSessiondemande(response.data)
-      const dd = response.data.seddatedebut !== null ? new Date(response.data.seddatedebut) : ''
-      const df = response.data.seddatefin !== null ? new Date(response.data.seddatefin) : ''
-      setDates({
-        datedebut: dd !== null ? dd.toLocaleDateString() : '',
-        datefin: df !== null ? df.toLocaleDateString() : '',
-      })
-      setShow(response.success)
+      const t = response.data && response.data.typerepondant 
+      if (t.tyrlibelle === 'étudiant') {
+      	setSessiondemande(response.data)
+      	const dd = response.data.seddatedebut !== null ? new Date(response.data.seddatedebut) : ''
+      	const df = response.data.seddatefin !== null ? new Date(response.data.seddatefin) : ''
+      	setDates({
+          datedebut: dd !== null ? dd.toLocaleDateString() : '',
+          datefin: df !== null ? df.toLocaleDateString() : '',
+        })
+        setShow(response.success)
+      } else {
+	//
+      }
     } else {
       //
     }
@@ -45,14 +50,22 @@ const DemandeGuestSoumettre = () => {
     }
   }
 
+  const fetchGetSite = async () => {
+    const response = await getItem('sites_getactive')
+    if (response.success) {
+      setSites(response.data)
+    }
+  }
+
   useEffect(() => {
-    let timerId = setInterval(() => {
+    //let timerId = setInterval(() => {
       fetchGetSessiondemande()
-      fetchGetRegion()
-    }, 2000)
+      //fetchGetRegion()
+      fetchGetSite()
+   /* }, 600000)
     return () => {
       clearInterval(timerId)
-    }
+    }*/
   }, [])
 
   // Redirection vers la page d'accueil
@@ -60,51 +73,28 @@ const DemandeGuestSoumettre = () => {
     navigate('/', { replace: true })
   }
 
-  // Filter sites by regions
-  const handleRegion = async (e) => {
-    const { name, value } = e.target
-    if (!isEmpty(value)) {
-      await getItem('regions/:id'.replace(':id', value)).then((response) => {
-        const r = response.data
-        const obj = $('#site')
-        if (r) {
-          if (r.provinces.length > 0) {
-            let s = r.provinces[0].sites
-            setSites(s)
-            if (s.length > 0) {
-              obj.prop('disabled', false)
-            } else {
-              obj.prop('disabled', true)
-            }
-          } else {
-            obj.prop('disabled', true)
-          }
-        } else {
-          obj.prop('disabled', true)
-        }
-      })
-    }
-  }
-
   // Search & Submit
   const handleSubmit = async (e) => {
     e.preventDefault()
-    const submitterName = e.nativeEvent.submitter.name
-    // Search
-    if (submitterName === 'btn-submit') {
-      // récupération des données du formulaire
-      const formData = new FormData(formRef.current)
-      const formValues = Object.fromEntries(formData)
-      formValues.sessiondemande = sessiondemande && sessiondemande.id
-      await createItem('demandes/guestsubmit', formValues).then((response) => {
-        if (response.success) {
-          //   if (btnResetRef.current) {
-          //     btnResetRef.current.click()
-          //   }
-        }
-        setAlert(response)
-      })
+    // récupération des données du formulaire
+    const formData = new FormData(formRef.current)
+    const formValues = Object.fromEntries(formData)
+    formValues.sessiondemande = sessiondemande && sessiondemande.id
+    const response = await guestCreateItem('demandes/guestsubmit', formValues)
+    if (response.status === 500) {
+       setAlert({type:'warning', message:'Une erreur est survenue. Merci de réessayer ultérieurement !'})
+    } else {
+      setAlert(response)
+      if (response.success) {
+	 if (btnResetRef.current) {
+	    btnResetRef.current.click()
+         }
+      }
     }
+  }
+
+  const handleDemandeGuestSuivre = (e) => {
+    navigate('/demandes/suivre', { replace: true })
   }
 
   return (
@@ -117,7 +107,7 @@ const DemandeGuestSoumettre = () => {
               <form ref={formRef} onSubmit={handleSubmit} method="POST" encType="">
                 {/* Notifications & Alerts */}
                 {/* Notifications */}
-                <div className="card mb-2 sessionInfo">
+                <div className="card mb-1 sessionInfo">
                   <div className="card-body py-1 fw-bolder text-center">
                     <i className="fa fa-exclamation-circle me-2" aria-hidden="true"></i>
                     {'La session est ouverte du ' +
@@ -127,10 +117,22 @@ const DemandeGuestSoumettre = () => {
                       ' inclus !'}
                   </div>
                 </div>
+
+		{/* Invite à suivre la demande */}
+            	<div className="card bg-light mb-1" style={{ backgroundColor: '#970000', border: '5px solid #970000' }}>
+              	  <div className="card-body py-1 text-justify">
+                      Des dysfonctionnements peuvent survenir lors de la soumission. Au cas où vous ne parvenez pas à soumettre votre demande, merci de vérifier d'abord via le bouton 
+                      <button type="button" className="btn btn-sm custom-btn-success ms-1" name="suivre-demande" onClick={handleDemandeGuestSuivre}>
+                        <i className="fa fa-eye me-1" aria-hidden="true"></i>Suivre ma demande
+                      </button>
+	              {/* <div className="">Au cas échéant, merci de renseigner le formulaire disponible au lien <a href="https://cloud.uv.bf/index.php/apps/forms/s/rHqCXrzFKntwPf3nwewgfwqJ">m'aider à soumettre !</a></div> */} 
+                  </div>
+                </div>
+
                 {/* Alerts */}
                 {alert && (
                   <div
-                    className="card mb-2"
+                    className="card mb-1"
                     style={{
                       backgroundColor: colors[alert.type],
                       borderColor: colors[alert.type],
@@ -152,7 +154,7 @@ const DemandeGuestSoumettre = () => {
                       className="btn ms-auto custom-btn-secondary"
                       onClick={handleHome}
                     >
-                      <i className="fa fa-home me-1" aria-hidden="true"></i>Page d'accueil
+                      <i className="fa fa-home me-1" aria-hidden="true"></i>Accueil
                     </button>
                   </div>
                   <div className="card-body py-1">
@@ -175,30 +177,6 @@ const DemandeGuestSoumettre = () => {
                         />
                       </div>
                     </div>
-                    {/* Région du site désiré pour la remise */}
-                    <div className="my-2">
-                      <label htmlFor="region" className="form-label mb-0 fw-bolder">
-                        Région du site désiré pour la remise
-                        <CustomRequired />
-                      </label>
-                      <div className="">
-                        <select
-                          className="form-select"
-                          aria-label="Default select example"
-                          id="region"
-                          name="region"
-                          required
-                          onChange={handleRegion}
-                        >
-                          <option value="">Sélectionner ici !</option>
-                          {regions.map((region, index) => (
-                            <option value={region.id} key={'region-item-' + index}>
-                              {index + 1 + '. ' + region.rgnnom + ', ' + region.rgncheflieu}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
 
                     {/* Site désiré pour la remise */}
                     <div className="my-2">
@@ -213,7 +191,7 @@ const DemandeGuestSoumettre = () => {
                           id="site"
                           name="site"
                           required
-                          disabled
+ 
                         >
                           <option value="">Sélectionner ici !</option>
                           {sites.map((site, index) => (
@@ -263,6 +241,8 @@ const DemandeGuestSoumettre = () => {
             )}
           </div>
         </div>
+        {/*  */}	
+
       </div>
     </div>
   )

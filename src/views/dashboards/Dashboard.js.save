@@ -1,0 +1,361 @@
+import React, { useEffect, useState } from 'react'
+import { getData, getDashboardData } from '../../apiService'
+import { intervalDelays } from '../../constants'
+
+const Dashboard = ({ auth }) => {
+  const [anneeacademique, setAnneeacademique] = useState([])
+  const [repondants, setRepondants] = useState([
+    { title: 'Répondants', value: 0 },
+    { title: 'admissibles', value: 0 },
+    { title: 'bénéficiaires', value: 0 },
+    { title: 'restants', value: 0 },
+  ])
+  const [sites, setSites] = useState([
+    { title: 'Sites', value: 0 },
+    { title: 'actives', value: 0 },
+    { title: 'inactives', value: 0 },
+  ])
+  const [sims, setSims] = useState([
+    { title: 'Sims', value: 0 },
+    { title: 'associées', value: 0 },
+    { title: 'attribuées', value: 0 },
+    { title: 'libre', value: 0 },
+  ])
+  const [sessiondemandes, setSessiondemandes] = useState([
+    { title: 'Session de demandes', value: 0 },
+    { title: 'actives', value: 0 },
+    { title: 'inactives', value: 0 },
+  ])
+  const [sessionremises, setSessionremises] = useState([
+    { title: 'Session de remises', value: 0 },
+    { title: 'actives', value: 0 },
+    { title: 'inactives', value: 0 },
+  ])
+  const [demandes, setDemandes] = useState([
+    { title: 'Demandes', value: 0 },
+    { title: 'traitées', value: 0 },
+    { title: 'en cours', value: 0 },
+  ])
+  const [dates, setDates] = useState({ datedebut: '', datefin: '' })
+  // const [remises, setRemises] = useState([])
+
+  // Année académique en cours
+  const fetchGetAnneeacademique = async () => {
+    const response = await getDashboardData('anneeacademiques_getDashboardDatacurrent/:resource')
+    if (response) {
+      setAnneeacademique(response)
+      const dd = response.acadatedebut !== null ? new Date(response.acadatedebut) : ''
+      const df = response.acadatefin !== null ? new Date(response.acadatefin) : ''
+      setDates({
+        datedebut: dd !== null ? dd.toLocaleDateString() : dd,
+        datefin: df !== null ? df.toLocaleDateString() : df,
+      })
+      // Sessions de demandes
+      if (response.sesssiondemandes) {
+        const d = response.sessiondemandes
+        const ac = d.filter((item) => item.sedactive === 'oui')
+        setSessiondemandes([
+          { title: 'Session de demandes', value: d.length },
+          { title: 'actives', value: ac.length },
+          { title: 'inactives', value: d.length - ac.length },
+        ])
+      }
+      // Sessions de remise
+      if (response.sesssionremises) {
+        const d = response.sessionremises
+        const ac = d.filter((item) => item.seractive === 'oui')
+        setSessionremises([
+          { title: 'Session de remises', value: d.length },
+          { title: 'actives', value: ac.length },
+          { title: 'inactives', value: d.length - ac.length },
+        ])
+      }
+      // Demandes
+      if (response.sessiondemandes.demandes) {
+        const d = response.sessiondemandes.demandes
+        const tr = d.filter((item) => item.sim !== null)
+        setDemandes([
+          { title: 'Demandes', value: d.length },
+          { title: 'traitées', value: tr.length },
+          { title: 'en cours', value: d.length - tr.length },
+        ])
+      }
+      if (response.sims) {
+        const s = response.sims
+        const ass = s.filter((item) => item.region_id !== null || item.province_id !== null)
+        const att = s.filter((item) => item.demande_id !== null)
+        const lib = s.length - att.length
+        setSims([
+          { title: 'Sims', value: s.length },
+          { title: 'associées', value: ass.length },
+          { title: 'attribuées', value: att.length },
+          { title: 'libres', value: lib },
+        ])
+      }
+    } else {
+      //
+    }
+  }
+
+  // Répondants
+  const fetchGetRepondant = async () => {
+    await getData('repondants')
+      .then((response) => {
+        const s = response
+        if (s) {
+          const adm = s.filter(
+            (item) =>
+              item.demandes.length > 0 && item.demandes.sim && item.demandes.sim.length === 0,
+          )
+          const ben = s.filter(
+            (item) => item.demandes.length > 0 && item.demandes.sim && item.demandes.sim.length > 0,
+          )
+          const res = s.filter((item) => item.demandes.length === 0)
+          setRepondants([
+            { title: 'Répondants', value: s.length },
+            { title: 'admissibles', value: adm.length },
+            { title: 'bénéficiaires', value: ben.length },
+            { title: 'restants', value: res.length },
+          ])
+        } else {
+          //
+        }
+      })
+      .catch((err) => console.log(err))
+  }
+
+  // Sites
+  const fetchGetSite = async () => {
+    await getData('sites')
+      .then((response) => {
+        const al = response
+        const ac = al.filter((item) => item.sitactive === 'oui')
+        setSites([
+          { title: 'Sites', value: al.length },
+          { title: 'actives', value: ac.length },
+          { title: 'inactives', value: al.length - ac.length },
+        ])
+      })
+      .catch((err) => console.log(err))
+  }
+
+  // Remises
+  // const fetchGetRemise = async () => {
+  //   await getData('demandes')
+  //     .then((response) => {
+  //       setDemandes(response)
+  //     })
+  //     .catch((err) => console.log(err))
+  // }
+
+  useEffect(() => {
+    fetchGetAnneeacademique()
+    let timerId = setInterval(() => {
+      fetchGetRepondant()
+      fetchGetSite()
+      // fetchGetRemise()
+    }, 2000)
+    return () => {
+      clearInterval(timerId)
+    }
+  }, [])
+
+  return (
+    <div className="container mt-4 dashboard">
+      {/*  */}
+      {/* Année académique en cours */}
+      <div className="card dashboardHeader">
+        <div className="card-body">
+          <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-0">
+            <div className="col text-start">
+              Année académique :
+              <span className="ms-1">{anneeacademique && anneeacademique.acacode}</span>
+            </div>
+            <div className="col text-center">
+              Date de début :<span className="ms-1">{dates.datedebut}</span>
+            </div>
+            <div className="col text-end">
+              Date de fin :<span className="ms-1">{dates.datefin}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      {/*  */}
+      <div className="row mt-1 row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        {/*  */}
+
+        {/* <!-- Card 1 : Répondants --> */}
+        <div className="col">
+          <div className="card h-100 statisticCard">
+            <div className="card-body">
+              <h5 className="card-title d-flex statisticCardTitle">
+                {repondants && repondants[0].title}
+                <span className="ms-auto">{repondants && repondants[0].value}</span>
+              </h5>
+              <div
+                className={`row row-cols-1 row-cols-md-2 row-cols-lg-${repondants.length - 1} g-0 statisticCardValue`}
+              >
+                {repondants.map((item, index) => {
+                  return (
+                    index > 0 && (
+                      <div className="col text-center" key={'repondants-item-' + index}>
+                        <span className="">{item.value}</span>
+                        <p className="py-0 my-0">{item.title}</p>
+                      </div>
+                    )
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* <!-- Card 2 : Sites --> */}
+        <div className="col">
+          <div className="card h-100 statisticCard">
+            <div className="card-body">
+              <h5 className="card-title d-flex statisticCardTitle">
+                {sites && sites[0].title}
+                <span className="ms-auto">{sites && sites[0].value}</span>
+              </h5>
+              <div
+                className={`row row-cols-1 row-cols-md-2 row-cols-lg-${sites.length - 1} g-0 statisticCardValue`}
+              >
+                {sites.map((item, index) => {
+                  return (
+                    index > 0 && (
+                      <div className="col text-center" key={'sites-item-' + index}>
+                        <span className="">{item.value}</span>
+                        <p className="py-0 my-0">{item.title}</p>
+                      </div>
+                    )
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* <!-- Card 3 : Sims --> */}
+        <div className="col">
+          <div className="card h-100 statisticCard">
+            <div className="card-body">
+              <h5 className="card-title d-flex statisticCardTitle">
+                {sims && sims[0].title}
+                <span className="ms-auto">{sims && sims[0].value}</span>
+              </h5>
+              <div
+                className={`row row-cols-1 row-cols-md-2 row-cols-lg-${sims.length - 1} g-0 statisticCardValue`}
+              >
+                {sims.map((item, index) => {
+                  return (
+                    index > 0 && (
+                      <div className="col text-center" key={'sims-item-' + index}>
+                        <span className="">{item.value}</span>
+                        <p className="py-0 my-0">{item.title}</p>
+                      </div>
+                    )
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* <!-- Card 4 : Sessions de demandes --> */}
+        <div className="col">
+          <div className="card h-100 statisticCard">
+            <div className="card-body">
+              <h5 className="card-title d-flex statisticCardTitle">
+                {sessiondemandes && sessiondemandes[0].title}
+                <span className="ms-auto">{sessiondemandes && sessiondemandes[0].value}</span>
+              </h5>
+              <div
+                className={`row row-cols-1 row-cols-md-2 row-cols-lg-${
+                  sessiondemandes.length - 1
+                } g-0 statisticCardValue`}
+              >
+                {sessiondemandes.map((item, index) => {
+                  return (
+                    index > 0 && (
+                      <div className="col text-center" key={'sims-item-' + index}>
+                        <span className="">{item.value}</span>
+                        <p className="py-0 my-0">{item.title}</p>
+                      </div>
+                    )
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* <!-- Card 5 : Sessions de remises --> */}
+        <div className="col">
+          <div className="card h-100 statisticCard">
+            <div className="card-body">
+              <h5 className="card-title d-flex statisticCardTitle">
+                {sessionremises && sessionremises[0].title}
+                <span className="ms-auto">{sessionremises && sessionremises[0].value}</span>
+              </h5>
+              <div
+                className={`row row-cols-1 row-cols-md-2 row-cols-lg-${sessionremises.length - 1} g-0 statisticCardValue`}
+              >
+                {sessionremises.map((item, index) => {
+                  return (
+                    index > 0 && (
+                      <div className="col text-center" key={'sims-item-' + index}>
+                        <span className="">{item.value}</span>
+                        <p className="py-0 my-0">{item.title}</p>
+                      </div>
+                    )
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* <!-- Card 6 : Demandes --> */}
+        <div className="col">
+          <div className="card h-100 statisticCard">
+            <div className="card-body">
+              <h5 className="card-title d-flex statisticCardTitle">
+                {demandes && demandes[0].title}
+                <span className="ms-auto">{demandes && demandes[0].value}</span>
+              </h5>
+              <div
+                className={`row row-cols-1 row-cols-md-2 row-cols-lg-${demandes.length - 1} g-0 statisticCardValue`}
+              >
+                {demandes.map((item, index) => {
+                  return (
+                    index > 0 && (
+                      <div className="col text-center" key={'sims-item-' + index}>
+                        <span className="">{item.value}</span>
+                        <p className="py-0 my-0">{item.title}</p>
+                      </div>
+                    )
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* <!-- Card 7 : Remises --> */}
+        {/* <div className="col">
+          <div className="card h-100">
+            <div className="card-body">
+              <h5 className="card-title d-flex">Remises<span className="ms-auto">{sims && sims.length}</span></h5>
+              <p className="card-text">This is a longer card with more text below.</p>
+            </div>
+          </div>
+        </div> */}
+
+        {/*  */}
+      </div>
+    </div>
+  )
+}
+
+export default Dashboard

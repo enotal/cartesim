@@ -2,22 +2,16 @@ import React, { useEffect, useState, useRef } from 'react'
 // Datatables
 import 'jquery'
 import $ from 'jquery'
-import DataTable from 'datatables.net-bs5' // Required for .xlsx
+import DataTable from 'datatables.net-bs5' 
 import 'datatables.net-select'
 import 'datatables.net-buttons'
 import 'datatables.net-buttons-bs5'
-import 'datatables.net-buttons/js/buttons.html5.js'
-import JSZip from 'jszip' // Required for .xlsx
-import 'datatables.net-buttons/js/buttons.print.min.js'
-import 'datatables.net-buttons/js/buttons.colVis.min.js'
+import 'datatables.net-buttons/js/buttons.html5.mjs'
 import 'pdfmake'
 import 'pdfmake/build/vfs_fonts'
-import language from 'datatables.net-plugins/i18n/fr-FR.json'
-import 'datatables.net-buttons-bs5/css/buttons.bootstrap5.css'
-import 'datatables.net-buttons-bs5/js/buttons.bootstrap5.js'
-import 'datatables.net-bs5/css/dataTables.bootstrap5.css'
-import 'datatables.net-bs5/js/dataTables.bootstrap5.js'
+import JSZip from 'jszip'  // Required for .xlxs 
 DataTable.Buttons.jszip(JSZip)
+import language from 'datatables.net-plugins/i18n/fr-FR.json'
 //
 import { getData, getItem, createItem, updateItem, deleteItem } from '../../apiService'
 import { CustomRequired } from '../../components/CustomRequired'
@@ -75,21 +69,24 @@ const Region = ({ auth }) => {
       title: 'PROVINCES',
       data: null,
       render: (data, type, row) => {
-        return row.provinces && row.provinces.length
+        const r = row.provinces && row.provinces.length
+        return `<div class="text-center">${r}</div>`
       },
     },
     {
       title: 'SITES',
       data: null,
       render: (data, type, row) => {
-        return row.provinces ? (row.provinces.sites ? row.provinces.sites.length : 0) : 0
+	const r = row.provinces ? (row.provinces.sites ? row.provinces.sites.length : 0) : 0
+        return `<div class="text-center">${r}</div>`
       },
     },
     {
       title: 'SIMS',
       data: null,
       render: (data, type, row) => {
-        return row.sims && row.sims.length
+        const r = row.sims && row.sims.length 
+        return `<div class="text-center">${r}</div>`
       },
     },
     {
@@ -124,7 +121,15 @@ const Region = ({ auth }) => {
   const fetchGet = async () => {
     try {
       const data = await getData(apiResource.get)
-      setData(auth.region !== null ? data.filter((item) => item.id === auth.region.id) : data)
+      if (auth.roles.includes('administrateur')) {
+        setData(data)
+      } else {
+        if (auth.region !== null) {
+          setData(data.filter((item) => item.id === auth.region.id))
+        } else {
+          setData(data)
+        }
+      }
     } catch (err) {
       setError(err)
     } finally {
@@ -132,11 +137,10 @@ const Region = ({ auth }) => {
     }
   }
   const fetchGetAnneeacademique = async () => {
-    await getData('anneeacademiques')
-      .then((response) => {
-        setAnneeacademiques(response)
-      })
-      .catch((err) => console.log(err))
+    const response = await getData('anneeacademiques')
+    if (response) {
+      setAnneeacademiques(response)
+    }
   }
 
   useEffect(() => {
@@ -150,8 +154,13 @@ const Region = ({ auth }) => {
   }, [])
 
   useEffect(() => {
-    if (tableRef.current) {
-      $(tableRef.current).DataTable({
+    //=== Retrieve saved page from localStorage
+    const savedPage = localStorage.getItem('cartesimDatatableCurrentPage')
+    const initialPage = savedPage ? parseInt(savedPage, 10) : 0 // Default to page 0
+    //===
+
+    //if (tableRef.current) {
+      const dataTableInstance = $(tableRef.current).DataTable({
         data: data,
         columns: columns,
         responsive: true,
@@ -187,7 +196,8 @@ const Region = ({ auth }) => {
               {
                 text: '<i class="fa fa-trash me-1" aria-hidden="true"></i>Tout supprimer',
                 className: 'dt-btn datatable-button rounded dt-btnCreate btnDeleteAll ms-2',
-                enabled: data && data.length > 0 ? true : false,
+                //enabled: data && data.length > 0 ? true : false,
+		enabled: false, 
                 action: () => {
                   if (deleteFormRef.current && deleteFormBtnLaunchRef.current) {
                     setIndexAlert(null)
@@ -243,7 +253,7 @@ const Region = ({ auth }) => {
                   },
                 },
               },
-              {
+              /*{
                 extend: 'print',
                 text: '<i class="fa fa-print" aria-hidden="true"></i>',
                 titleAttr: 'Imprimer',
@@ -256,12 +266,28 @@ const Region = ({ auth }) => {
                     page: 'current',
                   },
                 },
-              },
+              },*/
             ],
           },
         },
       })
+
+      //=== Add an event listener to capture page changes
+    // You can bind an event listener to 'draw.dt' to detect page changes
+    $(tableRef.current).on('page.dt', function () {
+      const currentPage = dataTableInstance.page()
+      //console.log('Current Page Index:', currentPage)
+      // Example of saving the page index to local storage (optional)
+      localStorage.setItem('cartesimDatatableCurrentPage', currentPage.toString())
+    })
+    dataTableInstance.page(initialPage).draw(false)
+    // Cleanup function to destroy table instance and remove event listener
+    return () => {
+      dataTableInstance.destroy()
+      $(tableRef.current).off('page.dt')
     }
+    //===
+    //}
 
     // === DATATABLE ACTIONS : create, show, edit, delete
     $('#myTable')
@@ -327,9 +353,9 @@ const Region = ({ auth }) => {
     setIndexAlert(null)
     setCreateAlert(null)
     const id = $(this).data('id')
-    await getItem(apiResource.show.replace(':id', id)).then((response) => {
-      if (response.success) {
-        if (createFormRef.current && createFormBtnLaunchRef.current) {
+    const response = await getItem(apiResource.show.replace(':id', id))
+    if (response.success) {
+      if (createFormRef.current && createFormBtnLaunchRef.current) {
           const r = response.data
           setCreateFormAction('edit')
           createFormRef.current.setAttribute('create-data-action', 'edit')
@@ -340,11 +366,10 @@ const Region = ({ auth }) => {
           $('input[name="active"][value="' + r.rgnactive + '"]').prop('checked', true)
           $('#commentaire').val(r.rgncommentaire)
           createFormBtnLaunchRef.current.click()
-        }
-      } else {
-        //
       }
-    })
+    } else {
+      //
+    }
   })
   //
   const handleCancelCreateForm = () => {

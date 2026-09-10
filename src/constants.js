@@ -4,10 +4,12 @@ export const sexes = ['Féminin', 'Masculin']
 export const colors = {
   success: '#056709',
   danger: '#970000',
-  warning: '#e1b505ff',
+  //warning: '#C7CF00', 
+  warning: '#e1b505',
 }
 export const repondantColumnToImport = ['ine', 'matricule', 'sexe', 'email']
 export const simColumnToImport = ['numero', 'code']
+export const importAttributeColumnToImport = ['ine', 'matricule', 'sexe', 'email', 'numero', 'code', 'site', 'annee']
 /*export const administrateur = {
   id: null,
   email: 'cartesim',

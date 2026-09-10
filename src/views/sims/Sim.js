@@ -2,22 +2,16 @@ import React, { useEffect, useState, useRef } from 'react'
 // Datatables
 import 'jquery'
 import $ from 'jquery'
-import DataTable from 'datatables.net-bs5' // Required for .xlsx
+import DataTable from 'datatables.net-bs5' 
 import 'datatables.net-select'
 import 'datatables.net-buttons'
 import 'datatables.net-buttons-bs5'
-import 'datatables.net-buttons/js/buttons.html5.js'
-import JSZip from 'jszip' // Required for .xlsx
-import 'datatables.net-buttons/js/buttons.print.min.js'
-import 'datatables.net-buttons/js/buttons.colVis.min.js'
+import 'datatables.net-buttons/js/buttons.html5.mjs'
 import 'pdfmake'
 import 'pdfmake/build/vfs_fonts'
-import language from 'datatables.net-plugins/i18n/fr-FR.json'
-import 'datatables.net-buttons-bs5/css/buttons.bootstrap5.css'
-import 'datatables.net-buttons-bs5/js/buttons.bootstrap5.js'
-import 'datatables.net-bs5/css/dataTables.bootstrap5.css'
-import 'datatables.net-bs5/js/dataTables.bootstrap5.js'
+import JSZip from 'jszip'  // Required for .xlxs 
 DataTable.Buttons.jszip(JSZip)
+import language from 'datatables.net-plugins/i18n/fr-FR.json'
 //
 import { getData, getItem, createItem, updateItem, deleteItem, getItemBy } from '../../apiService'
 import { CustomRequired } from '../../components/CustomRequired'
@@ -65,7 +59,7 @@ const Sim = ({ auth }) => {
   const [regions, setRegions] = useState([])
   const [provinces, setProvinces] = useState([])
   const [delay, SetDelay] = useState(2000)
-  const exportConstants = { title: 'Liste des cartes SIM', columns: [1, 2, 3, 4, 5, 6, 7] }
+  const exportConstants = { title: 'Liste des cartes SIM', columns: [1, 2, 3, 4 /*, 5, 6, 7*/] }
 
   const apiResource = {
     get: 'sims',
@@ -77,20 +71,28 @@ const Sim = ({ auth }) => {
 
   const columns = [
     { title: 'ID', data: 'id' },
-    { title: 'NUMERO', data: 'simnumero' },
-    { title: 'CODE', data: 'simcode' },
-    {
-      title: 'ANNEE ACAD.',
-      data: null,
+    { 
+      title: 'ANNEE ACADEMIQUE',
+      data: null, 
       render: (data, type, row) => {
-        return row.anneeacademique ? row.anneeacademique.acacode : ''
-      },
+        const r = row.anneeacademique ? row.anneeacademique.acacode : ''
+        return r 
+      }, 
+    },  
+    { title: 'NUMERO', data: 'simnumero' },
+    { 
+      title: 'IMSI', 
+      data: null, 
+      render: (data, type, row) => {
+        return row.simcode
+      },  
     },
     {
       title: 'DEMANDE',
       data: null,
       render: (data, type, row) => {
-        return row.demande ? row.demande.dmdcode : ''
+        const r = row.demandes ? row.demandes.map(item => item.id).join(", ") : '' 
+	return r
       },
     },
     {
@@ -111,8 +113,8 @@ const Sim = ({ auth }) => {
       title: 'DATE REMISE',
       data: null,
       render: (data, type, row) => {
-        const d = row.simdateremise !== null ? new Date(row.simdateremise) : null
-        return d !== null ? d.toLocaleDateString() : ''
+        const r = row.demandes ? row.demandes.map(item => { if(item.dmddateremiseeffective !== null ){ let d = new Date(item.dmddateremiseeffective); return d.toLocaleDateString(); }else{return ''}}).join(", ") : ''
+        return r
       },
     },
     {
@@ -123,7 +125,7 @@ const Sim = ({ auth }) => {
         // const btnShow = `<a class="btn btn-outline-warning me-1 tableActionBtn tableActionBtnShowItem" href="#" data-id="${row.id}" title="Voir les détails"><i class="fa fa-eye" aria-hidden="true"></i></a>`
         const btnEdit = `<a class="btn btn-outline-info me-1 tableActionBtn tableActionBtnEditItem" href="#" data-id="${row.id}" title="Editer"><i class="fa fa-edit" aria-hidden="true"></i></a>`
         const btnDelete = `<a class="btn btn-outline-danger me-1 tableActionBtn tableActionBtnDeleteItem" href="#" data-id="${row.id}" title="Supprimer"><i class="fa fa-trash" aria-hidden="true"></i></a>`
-        return `<div class="d-flex">${btnEdit + btnDelete}</div>`
+        return auth.region !== null ? '' : `<div class="d-flex">${btnEdit + btnDelete}</div>`
       },
     },
   ]
@@ -138,7 +140,7 @@ const Sim = ({ auth }) => {
     try {
       const response = await getData(apiResource.get)
       const r =
-        auth.region !== null ? response.filter((item) => item.region_id === auth.region) : response
+        auth.region !== null ? response.filter((item) => item.region_id === auth.region.id) : response
       setData(r)
       setSims(r.filter((item) => item.demande_id === null && item.region_id === null))
     } catch (err) {
@@ -149,19 +151,17 @@ const Sim = ({ auth }) => {
   }
 
   const fetchGetAnneeacademique = async () => {
-    await getData('anneeacademiques')
-      .then((response) => {
-        setAnneeacademiques(response)
-      })
-      .catch((err) => console.log(err))
+    const response = await getData('anneeacademiques')
+    if (response) {
+      setAnneeacademiques(response)
+    }
   }
 
   const fetchGetRegion = async () => {
-    await getData('regions')
-      .then((response) => {
-        setRegions(response)
-      })
-      .catch((err) => console.log(err))
+    const response = await getData('regions')
+    if (response) {
+      setRegions(response)
+    }
   }
 
   useEffect(() => {
@@ -176,8 +176,13 @@ const Sim = ({ auth }) => {
   }, [])
 
   useEffect(() => {
-    if (tableRef.current) {
-      $(tableRef.current).DataTable({
+    //=== Retrieve saved page from localStorage
+    const savedPage = localStorage.getItem('cartesimDatatableCurrentPage')
+    const initialPage = savedPage ? parseInt(savedPage, 10) : 0 // Default to page 0
+    //===
+
+    //if (tableRef.current) {
+      const dataTableInstance = $(tableRef.current).DataTable({
         data: data,
         columns: columns,
         responsive: true,
@@ -198,7 +203,7 @@ const Sim = ({ auth }) => {
               {
                 text: '<i class="fa fa-plus me-1" aria-hidden="true"></i>Ajouter',
                 className: 'dt-btn datatable-button rounded dt-btnCreate btnCreate my-1',
-                enabled: true,
+                enabled: auth.region !== null ? false : true,
                 action: () => {
                   if (createFormRef.current && createFormBtnLaunchRef.current) {
                     setCreateAlert(null)
@@ -209,10 +214,11 @@ const Sim = ({ auth }) => {
                   }
                 },
               },
-              {
+              /*{
                 text: '<i class="fa fa-trash me-1" aria-hidden="true"></i>Tout supprimer',
                 className: 'dt-btn datatable-button rounded dt-btnCreate btnDeleteAll ms-2 my-1',
-                enabled: data && data.length > 0 ? true : false,
+                //enabled: data && data.length > 0 ? true : false,
+		enabled: false,
                 action: () => {
                   if (deleteFormRef.current && deleteFormBtnLaunchRef.current) {
                     setIndexAlert(null)
@@ -226,11 +232,11 @@ const Sim = ({ auth }) => {
                     deleteFormBtnLaunchRef.current.click()
                   }
                 },
-              },
-              {
+              },*/
+              /*{
                 text: '<i class="fa fa-file-import me-1" aria-hidden="true"></i>Importer',
                 className: 'dt-btn datatable-button rounded dt-btnImport btnImport ms-2 my-1',
-                enabled: true,
+                enabled: auth.region !== null ? false : true,
                 action: () => {
                   if (importFormRef.current && importFormBtnLaunchRef.current) {
                     //   setCreateFormAction('create')
@@ -241,7 +247,7 @@ const Sim = ({ auth }) => {
                     importFormBtnLaunchRef.current.click()
                   }
                 },
-              },
+              },*/
               {
                 text: '<i class="fa fa-paper-plane me-1" aria-hidden="true"></i>Attribuer aux régions',
                 className: 'dt-btn datatable-button rounded dt-btnAttribute btnAttribute ms-2 my-1',
@@ -279,8 +285,22 @@ const Sim = ({ auth }) => {
                 className: 'datatable-export-button rounded ms-1',
                 enabled: data && data.length > 0 ? true : false,
                 filename: exportConstants.title,
+                customizeData: function(data) {
+                  // Loop through all rows in the exported data body
+                  for (let i = 0; i < data.body.length; i++) {
+                    // Loop through all cells in the current row
+                    for (let j = 0; j < data.body[i].length; j++) {
+                      // Prepend a Zero Width Non-Joiner character
+                      // This forces Excel to treat the cell content as text
+                      data.body[i][j] = '\u200C' + data.body[i][j];
+                    }
+                  }
+                },
                 exportOptions: {
                   columns: exportConstants.columns,
+                  modifier: {
+                    page: 'all'
+                  }
                 },
               },
               {
@@ -298,7 +318,7 @@ const Sim = ({ auth }) => {
                   },
                 },
               },
-              {
+              /*{
                 extend: 'print',
                 text: '<i class="fa fa-print" aria-hidden="true"></i>',
                 titleAttr: 'Imprimer',
@@ -311,12 +331,28 @@ const Sim = ({ auth }) => {
                     page: 'current',
                   },
                 },
-              },
+              },*/
             ],
           },
         },
       })
+      
+      //=== Add an event listener to capture page changes
+    // You can bind an event listener to 'draw.dt' to detect page changes
+    $(tableRef.current).on('page.dt', function () {
+      const currentPage = dataTableInstance.page()
+      //console.log('Current Page Index:', currentPage)
+      // Example of saving the page index to local storage (optional)
+      localStorage.setItem('cartesimDatatableCurrentPage', currentPage.toString())
+    })
+    dataTableInstance.page(initialPage).draw(false)
+    // Cleanup function to destroy table instance and remove event listener
+    return () => {
+      dataTableInstance.destroy()
+      $(tableRef.current).off('page.dt')
     }
+    //===
+    //}
 
     if (tableDemandeRef.current) {
       $(tableDemandeRef.current).DataTable({
@@ -1090,7 +1126,7 @@ const Sim = ({ auth }) => {
                   <div className="modal-header py-1 bg-primary">
                     <h5 className="modal-title  fw-bold text-light" id="importModalLabel">
                       <i className="fa fa-file-import me-1" aria-hidden="true"></i>Importer une
-                      liste de répondants
+                      liste de cartes SIM
                     </h5>
                     <button
                       ref={importFormBtnCloseRef}
@@ -1126,7 +1162,6 @@ const Sim = ({ auth }) => {
                         <div className="mb-2">
                           <label htmlFor="anneeacademique" className="form-label mb-0">
                             Année académique
-                            <CustomRequired />
                           </label>
                           <div className="">
                             <select
@@ -1134,7 +1169,7 @@ const Sim = ({ auth }) => {
                               aria-label="Default select example"
                               id="anneeacademique"
                               name="anneeacademique"
-                              required
+                              //required
                               autoFocus
                             >
                               <option value="">Sélectionner ici !</option>

@@ -3,14 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import { AppGuestHeader, AppGuestFooter } from '../../components'
 import { CustomIndexAlert } from '../../components/CustomIndexAlert'
 import { CustomRequired } from '../../components/CustomRequired'
-import { getItemBy } from '../../apiService'
+import { guestGetItemBy } from '../../apiService'
 import { colors } from '../../constants'
 
 const DemandeGuestSuivre = () => {
   const navigate = useNavigate()
   const formRef = useRef()
-  const [demande, setDemande] = useState(null)
-  const [date, setDate] = useState(null)
+  const [demandes, setDemandes] = useState([])
   const [alert, setAlert] = useState(null)
 
   // Redirection vers la page d'accueil
@@ -34,15 +33,29 @@ const DemandeGuestSuivre = () => {
       // récupération des données du formulaire
       const formData = new FormData(formRef.current)
       const formValues = Object.fromEntries(formData)
-      const search = e.target.getAttribute('data-search')
-      formValues.search = search
-      const response = await getItemBy('demandes/showby', formValues)
+      const response = await guestGetItemBy('demandes/guestfollow', formValues)
       if (response.success) {
-        setDemande(response.data)
-        const d = response.data !== null ? new Date(response.data.dmddate) : null
-        setDate(d !== null ? d.toLocaleDateString() : '')
+	const dmds = response.data ? response.data.demandes : []
+        const items = []
+        dmds.map((dmd) => {
+          let d = dmd.dmddate !== null ? new Date(dmd.dmddate) : null
+          let serdd = dmd.sessionremise !== null && dmd.sessionremise.seractive === "oui" ? (dmd.sessionremise.serdatedebut !== null ? new Date(dmd.sessionremise.serdatedebut) : null) : null
+          let serdf = dmd.sessionremise !== null && dmd.sessionremise.seractive === "oui" ? (dmd.sessionremise.serdatefin !== null ? new Date(dmd.sessionremise.serdatefin) : null) : null
+          let simde = dmd.sim !== null ? (dmd.sim.simdateremiseeffective !== null ? new Date(dmd.sim.simdateremiseeffective) : null) : null
+          items.push({
+            id: dmd.id, 
+            date: d !== null ? d.toLocaleDateString() : '', 
+            site: dmd.site && dmd.site.sitlibelle, 
+            simnumero: dmd.sim !== null ? 'Composer *444#, puis valider' : '',  
+            simcode: dmd.sim !== null ? dmd.sim.simcode : '',
+	    sessionremise: serdd !== null && serdf !== null ? serdd.toLocaleDateString() + ' - ' + serdf.toLocaleDateString() : '' , 
+            remise: dmd.dmddateremise !== null ? dmd.dmddateremise : '',  
+            dateeffectiveremise: simde !== null ? simde.toLocaleDateString() : null,  
+          })
+        })
+        setDemandes(items)
       } else {
-        setDemande(null)
+        setDemandes([])
       }
       setAlert(response)
     }
@@ -62,7 +75,6 @@ const DemandeGuestSuivre = () => {
               method="GET"
               onSubmit={handleSubmit}
               encType=""
-              data-search="code"
             >
               {/* Alerts */}
               {alert && (
@@ -89,15 +101,15 @@ const DemandeGuestSuivre = () => {
                     className="btn ms-auto custom-btn-secondary"
                     onClick={handleHome}
                   >
-                    <i className="fa fa-home me-1" aria-hidden="true"></i>Page d'accueil
+                    <i className="fa fa-home me-1" aria-hidden="true"></i>Accueil
                   </button>
                 </div>
                 <div className="card-body pt-1">
                   <CustomRequired tagP={true} />
-                  {/* Code */}
+                  {/* Identifiant */}
                   <div className="my-2">
                     <label htmlFor="code" className="form-label mb-0 fw-bolder">
-                      Code de la demande
+                      Identifiant (INE)
                       <CustomRequired />
                     </label>
                     <div className="d-flex">
@@ -109,12 +121,13 @@ const DemandeGuestSuivre = () => {
                           aria-label="Search"
                           id="code"
                           name="code"
+                          required
                           autoFocus
                         />
                       </div>
                       <button
                         type="submit"
-                        className="btn custom-btn-success ms-3"
+                        className="btn custom-btn-success ms-3 text-nowrap"
                         name="btn-search"
                       >
                         <i className="fa fa-search me-1" aria-hidden="true"></i>Rechercher
@@ -123,76 +136,66 @@ const DemandeGuestSuivre = () => {
                   </div>
                 </div>
               </div>
-              {/* Result */}
-              {demande && (
-                <div className="card mt-2">
-                  <div className="card-body pb-0">
-                    {demande.sim_id === null && (
-                      <div
-                        className="card mb-2"
-                        style={{
-                          backgroundColor: colors['success'],
-                          borderColor: colors['success'],
-                          fontSize: '1em',
-                        }}
-                      >
-                        <div className="card-body text-light py-1 d-flex justify-content-center align-content-center">
-                          <i className="fa fa-check me-1" aria-hidden="true"></i>Votre demande est
-                          en cours de traitement. Merci de vérifier ultérieurment !
+	      {/* Result */}
+              {demandes.length > 0 && (
+                <div className="card mt-2 show-follow-result-card">
+                  <div className="card-header">{demandes.length + ' demande(s) associée(s)'}</div>
+                  <div className="card-body py-1">
+                    <div className="row row-cols-1 row-cols-md-1 row-cols-lg-1 g-2">
+                      {demandes.map((demande, index) => (
+                        <div className="col" key={'demande-item-' + index}>
+                          <div className="card h-100">
+                            <div className="card-header py-1">{'# demande ' + (index + 1)}</div>
+                            <div className="card-body py-1">
+                              {/* Code */}
+                              <div className="d-flex border-bottom">
+                                <div className="show-follow-title">Code</div>
+                                <div className="show-follow-value ms-auto">{demande.id}</div>
+                              </div>
+                              {/* Date */}
+                              <div className="d-flex border-bottom">
+                                <div className="show-follow-title">Date de la demande</div>
+                                <div className="show-follow-value ms-auto">{demande.date}</div>
+                              </div>
+			      {/* Site désiré pour la remise */}
+                              <div className="d-flex border-bottom">
+                                <div className="show-follow-title">Site désiré pour la remise</div>
+                                <div className="show-follow-value ms-auto">{demande.site}</div>
+                              </div>
+                              <div className="d-flex border-bottom">
+                               <div className="show-follow-title">Période, Horaires et Lieu de remise</div>
+                               <div className="show-follow-value ms-auto">{demande.remise}</div>
+                              </div>
+                              {/* Code de la SIM */}
+                              <div className="d-flex border-bottom">
+                                <div className="show-follow-title">Code de la SIM</div>
+                                <div className="show-follow-value ms-auto">{demande.simcode}</div>
+                              </div>
+                              {/* Numéro d'abonné */}
+                              <div className="d-flex border-bottom">
+                                <div className="show-follow-title">Numéro d'abonné</div>
+                                <div className="show-follow-value ms-auto text-danger">{demande.simnumero}</div>
+                              </div>
+                              {/* Session de remise */}
+                              {/*<div className="d-flex border-bottom">
+                                <div className="show-follow-title">Session de remise</div>
+                                <div className="show-follow-value ms-auto">{demande.sessionremise}</div>
+                              </div>*/}
+                              {/* Date prévisionnelle de remise */}
+			      {/*<div className="d-flex border-bottom">
+			        <div className="show-follow-title">Date prévisionnelle de remise</div>
+                                <div className="show-follow-value ms-auto">{demande.dateprevisionnelleremise}</div>
+                              </div>*/}
+			      {/* Date effective de remise  */}
+			      <div className="d-flex">
+				<div className="show-follow-title">Date de remise</div>
+				<div className="show-follow-value ms-auto">{demande.dateeffectiveremise}</div>
+			      </div>
+                              {/*  */}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    <div className="table-responsive-sm">
-                      <table className="table table-sm table-striped">
-                        <tbody>
-                          {/* Code */}
-                          <tr>
-                            <th scope="row" className="show-table-title">
-                              Code
-                            </th>
-                            <td className="show-table-value">{demande.dmdcode}</td>
-                          </tr>
-                          {/* Date */}
-                          <tr>
-                            <th scope="row" className="show-table-title">
-                              Date de la demande
-                            </th>
-                            <td className="show-table-value">{date}</td>
-                          </tr>
-                          {/* Code Sim */}
-                          <tr>
-                            <th scope="row" className="show-table-title">
-                              Code SIM
-                            </th>
-                            <td className="show-table-value">
-                              {demande.sim && demande.sim.simcode}
-                            </td>
-                          </tr>
-                          {/* Site */}
-                          <tr>
-                            <th scope="row" className="show-table-title">
-                              Site de la remise
-                            </th>
-                            <td className="show-table-value">
-                              {demande.site && demande.site.sitlibelle}
-                            </td>
-                          </tr>
-                          {/* Session remise */}
-                          <tr>
-                            <th scope="row" className="show-table-title">
-                              Session de remise
-                            </th>
-                            <td className="show-table-value">
-                              {demande.session &&
-                                'du ' +
-                                  demande.sessionremise.serdatedebut +
-                                  ' au ' +
-                                  demande.sessionremise.datefin}
-                            </td>
-                          </tr>
-                          {/*  */}
-                        </tbody>
-                      </table>
+                      ))}
                     </div>
                   </div>
                 </div>

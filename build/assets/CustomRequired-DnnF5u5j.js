@@ -1,0 +1,1 @@
+import{j as s}from"./index-BFk_RRQC.js";const a=({tagP:e})=>s.jsx(s.Fragment,{children:s.jsxs("small",{className:"",children:[e&&"Champ obligatoire",s.jsx("span",{className:"text-danger ms-1",children:"*"})]})});export{a as C};
